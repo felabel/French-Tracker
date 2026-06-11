@@ -22,9 +22,20 @@ export interface ScoreEntry {
   createdAt: string;
 }
 
+export interface EcritureEntry {
+  id: string;
+  date: string;
+  subject: string;
+  prompt: string;
+  text: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
 export interface UserExportData {
   profile: Profile;
   scores: ScoreEntry[];
+  ecritures?: EcritureEntry[];
   exportedAt: string;
 }
 

@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/select";
 import { useProfile } from "@/hooks/useProfile";
 import { useScores } from "@/hooks/useScores";
+import { useEcritures } from "@/hooks/useEcritures";
 import { exportUserData, importUserData } from "@/lib/storage";
 import { ALL_SECTIONS, CefrLevel, NclcLevel, UserExportData } from "@/lib/types";
 import { ALL_NCLC_LEVELS, getMinScoreForNclc } from "@/lib/nclc";
@@ -30,6 +31,7 @@ export default function SettingsPage() {
     updateActiveProfile,
   } = useProfile();
   const { refreshScores } = useScores();
+  const { refreshEcritures } = useEcritures();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [newProfileName, setNewProfileName] = useState("");
@@ -78,6 +80,7 @@ export default function SettingsPage() {
         }
         importUserData(data);
         refreshScores();
+        refreshEcritures();
         setMessage(`Imported data for "${data.profile.displayName}".`);
         setError("");
       } catch {

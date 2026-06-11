@@ -1,4 +1,4 @@
-import { Profile, ScoreEntry, UserExportData } from "./types";
+import { EcritureEntry, Profile, ScoreEntry, UserExportData } from "./types";
 
 const SCHEMA_VERSION = 1;
 const PROFILES_KEY = "tcf_profiles";
@@ -7,6 +7,10 @@ const SCHEMA_KEY = "tcf_schema_version";
 
 function scoresKey(userId: string): string {
   return `tcf_scores_${userId}`;
+}
+
+function ecrituresKey(userId: string): string {
+  return `tcf_ecritures_${userId}`;
 }
 
 function isBrowser(): boolean {
@@ -74,6 +78,7 @@ export function createProfile(displayName: string): Profile {
   saveProfiles(profiles);
   setActiveUserId(profile.id);
   writeItem(scoresKey(profile.id), []);
+  writeItem(ecrituresKey(profile.id), []);
   return profile;
 }
 
@@ -88,6 +93,7 @@ export function deleteProfile(userId: string): void {
   const profiles = getProfiles().filter((p) => p.id !== userId);
   saveProfiles(profiles);
   removeItem(scoresKey(userId));
+  removeItem(ecrituresKey(userId));
 
   const activeId = getActiveUserId();
   if (activeId === userId) {
@@ -138,12 +144,52 @@ export function deleteScoreEntry(userId: string, entryId: string): void {
   saveScores(userId, scores);
 }
 
+export function getEcritures(userId: string): EcritureEntry[] {
+  return readItem<EcritureEntry[]>(ecrituresKey(userId), []);
+}
+
+export function saveEcritures(userId: string, ecritures: EcritureEntry[]): void {
+  writeItem(ecrituresKey(userId), ecritures);
+}
+
+export function addEcriture(
+  userId: string,
+  entry: Omit<EcritureEntry, "id" | "createdAt">
+): EcritureEntry {
+  const existing = getEcritures(userId);
+  const newEntry: EcritureEntry = {
+    ...entry,
+    id: crypto.randomUUID(),
+    createdAt: new Date().toISOString(),
+  };
+  saveEcritures(userId, [...existing, newEntry]);
+  return newEntry;
+}
+
+export function updateEcriture(
+  userId: string,
+  entry: EcritureEntry
+): void {
+  const ecritures = getEcritures(userId).map((e) =>
+    e.id === entry.id
+      ? { ...entry, updatedAt: new Date().toISOString() }
+      : e
+  );
+  saveEcritures(userId, ecritures);
+}
+
+export function deleteEcriture(userId: string, entryId: string): void {
+  const ecritures = getEcritures(userId).filter((e) => e.id !== entryId);
+  saveEcritures(userId, ecritures);
+}
+
 export function exportUserData(userId: string): UserExportData | null {
   const profile = getProfiles().find((p) => p.id === userId);
   if (!profile) return null;
   return {
     profile,
     scores: getScores(userId),
+    ecritures: getEcritures(userId),
     exportedAt: new Date().toISOString(),
   };
 }
@@ -158,6 +204,7 @@ export function importUserData(data: UserExportData): Profile {
     );
     saveProfiles(updated);
     saveScores(data.profile.id, data.scores);
+    saveEcritures(data.profile.id, data.ecritures ?? []);
     setActiveUserId(data.profile.id);
     return data.profile;
   }
@@ -165,6 +212,7 @@ export function importUserData(data: UserExportData): Profile {
   profiles.push(data.profile);
   saveProfiles(profiles);
   saveScores(data.profile.id, data.scores);
+  saveEcritures(data.profile.id, data.ecritures ?? []);
   setActiveUserId(data.profile.id);
   return data.profile;
 }

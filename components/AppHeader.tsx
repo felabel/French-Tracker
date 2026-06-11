@@ -21,6 +21,7 @@ const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/scores", label: "Scores" },
   { href: "/log", label: "Log Test" },
+  { href: "/expression-ecrite", label: "Expression écrite" },
   { href: "/settings", label: "Settings" },
 ];
 
