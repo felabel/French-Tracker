@@ -1,7 +1,7 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { Download, Upload, Trash2, UserPlus } from "lucide-react";
+import { useRef, useState, useEffect } from "react";
+import { Download, Upload, Trash2, UserPlus, Cloud, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -16,7 +16,16 @@ import {
 import { useProfile } from "@/hooks/useProfile";
 import { useScores } from "@/hooks/useScores";
 import { useEcritures } from "@/hooks/useEcritures";
-import { exportUserData, importUserData } from "@/lib/storage";
+import { useVocab } from "@/hooks/useVocab";
+import { useSync } from "@/hooks/useSync";
+import {
+  exportUserData,
+  importUserData,
+  getSyncId,
+  setSyncId,
+  clearSyncId,
+  generateSyncId,
+} from "@/lib/storage";
 import { ALL_SECTIONS, CefrLevel, NclcLevel, UserExportData } from "@/lib/types";
 import { ALL_NCLC_LEVELS, getMinScoreForNclc } from "@/lib/nclc";
 import { CEFR_TARGETS, SECTION_LABELS } from "@/lib/tcf";
@@ -32,11 +41,45 @@ export default function SettingsPage() {
   } = useProfile();
   const { refreshScores } = useScores();
   const { refreshEcritures } = useEcritures();
+  const { refreshVocab } = useVocab();
+  const { syncNow, status: syncStatus, lastSynced } = useSync();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const [syncIdInput, setSyncIdInput] = useState("");
   const [newProfileName, setNewProfileName] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    setSyncIdInput(getSyncId() ?? "");
+  }, []);
+
+  const handleSaveSyncId = () => {
+    const trimmed = syncIdInput.trim();
+    if (!trimmed) {
+      setError("Enter a Sync ID or generate one.");
+      return;
+    }
+    setSyncId(trimmed);
+    setMessage(`Sync ID set to "${trimmed}". Syncing now…`);
+    setError("");
+    syncNow();
+  };
+
+  const handleGenerateSyncId = () => {
+    const id = generateSyncId();
+    setSyncIdInput(id);
+    setSyncId(id);
+    setMessage(`Generated Sync ID: ${id}. Use this on all your devices.`);
+    setError("");
+    syncNow();
+  };
+
+  const handleClearSyncId = () => {
+    clearSyncId();
+    setSyncIdInput("");
+    setMessage("Cloud sync disabled.");
+  };
 
   const handleCreateProfile = () => {
     const trimmed = newProfileName.trim();
@@ -81,6 +124,7 @@ export default function SettingsPage() {
         importUserData(data);
         refreshScores();
         refreshEcritures();
+        refreshVocab();
         setMessage(`Imported data for "${data.profile.displayName}".`);
         setError("");
       } catch {
@@ -286,6 +330,64 @@ export default function SettingsPage() {
               </Select>
             </div>
           ))}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Cloud className="h-5 w-5" />
+            Cloud Sync
+          </CardTitle>
+          <CardDescription>
+            Sync scores, writings, and vocabulary across devices using Vercel KV.
+            Use the same Sync ID on localhost and your Vercel link.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="sync-id">Sync ID</Label>
+            <div className="flex gap-2">
+              <Input
+                id="sync-id"
+                placeholder="e.g. tcf-a3f9b2c1"
+                value={syncIdInput}
+                onChange={(e) => setSyncIdInput(e.target.value)}
+              />
+              <Button variant="outline" onClick={handleSaveSyncId}>
+                Save
+              </Button>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" onClick={handleGenerateSyncId}>
+              Generate new ID
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => syncNow()}
+              disabled={!syncIdInput || syncStatus === "syncing"}
+            >
+              <RefreshCw
+                className={`mr-2 h-4 w-4 ${syncStatus === "syncing" ? "animate-spin" : ""}`}
+              />
+              Sync now
+            </Button>
+            {syncIdInput && (
+              <Button variant="ghost" onClick={handleClearSyncId}>
+                Disable sync
+              </Button>
+            )}
+          </div>
+          {lastSynced && (
+            <p className="text-xs text-muted-foreground">
+              Last synced: {new Date(lastSynced).toLocaleString()}
+            </p>
+          )}
+          <p className="text-xs text-muted-foreground">
+            Requires KV_REST_API_URL and KV_REST_API_TOKEN on Vercel (add Redis
+            integration from Vercel Marketplace).
+          </p>
         </CardContent>
       </Card>
 

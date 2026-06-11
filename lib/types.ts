@@ -32,10 +32,45 @@ export interface EcritureEntry {
   updatedAt?: string;
 }
 
+export interface VocabCategory {
+  id: string;
+  name: string;
+  isDefault?: boolean;
+  createdAt: string;
+}
+
+export interface VocabEntry {
+  id: string;
+  categoryId: string;
+  french: string;
+  english?: string;
+  example?: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface UserDataBundle {
+  scores: ScoreEntry[];
+  ecritures: EcritureEntry[];
+  vocabCategories: VocabCategory[];
+  vocabEntries: VocabEntry[];
+}
+
+export interface SyncBlob {
+  version: 1;
+  profiles: Profile[];
+  activeUserId: string | null;
+  data: Record<string, UserDataBundle>;
+  updatedAt: string;
+}
+
 export interface UserExportData {
   profile: Profile;
   scores: ScoreEntry[];
   ecritures?: EcritureEntry[];
+  vocabCategories?: VocabCategory[];
+  vocabEntries?: VocabEntry[];
   exportedAt: string;
 }
 

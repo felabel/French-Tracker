@@ -1,9 +1,21 @@
-import { EcritureEntry, Profile, ScoreEntry, UserExportData } from "./types";
+import {
+  EcritureEntry,
+  Profile,
+  ScoreEntry,
+  SyncBlob,
+  UserDataBundle,
+  UserExportData,
+  VocabCategory,
+  VocabEntry,
+} from "./types";
+import { createDefaultCategories } from "./vocab-defaults";
 
 const SCHEMA_VERSION = 1;
 const PROFILES_KEY = "tcf_profiles";
 const ACTIVE_USER_KEY = "tcf_active_user";
 const SCHEMA_KEY = "tcf_schema_version";
+const SYNC_ID_KEY = "tcf_sync_id";
+const LOCAL_UPDATED_KEY = "tcf_local_updated_at";
 
 function scoresKey(userId: string): string {
   return `tcf_scores_${userId}`;
@@ -11,6 +23,14 @@ function scoresKey(userId: string): string {
 
 function ecrituresKey(userId: string): string {
   return `tcf_ecritures_${userId}`;
+}
+
+function vocabCategoriesKey(userId: string): string {
+  return `tcf_vocab_categories_${userId}`;
+}
+
+function vocabEntriesKey(userId: string): string {
+  return `tcf_vocab_entries_${userId}`;
 }
 
 function isBrowser(): boolean {
@@ -33,6 +53,7 @@ function writeItem(key: string, value: unknown): void {
   try {
     localStorage.setItem(key, JSON.stringify(value));
     localStorage.setItem(SCHEMA_KEY, String(SCHEMA_VERSION));
+    touchLocalUpdated();
   } catch (error) {
     console.error("localStorage write failed:", error);
     throw new Error("Could not save data. Storage may be full.");
@@ -43,9 +64,54 @@ function removeItem(key: string): void {
   if (!isBrowser()) return;
   try {
     localStorage.removeItem(key);
+    touchLocalUpdated();
   } catch {
     // ignore
   }
+}
+
+function touchLocalUpdated(): void {
+  if (!isBrowser()) return;
+  localStorage.setItem(LOCAL_UPDATED_KEY, new Date().toISOString());
+}
+
+function notifyChange(): void {
+  if (!isBrowser()) return;
+  import("./sync").then(({ scheduleSyncPush }) => scheduleSyncPush());
+}
+
+function writeAndNotify(key: string, value: unknown): void {
+  writeItem(key, value);
+  notifyChange();
+}
+
+export function getSyncId(): string | null {
+  if (!isBrowser()) return null;
+  return localStorage.getItem(SYNC_ID_KEY);
+}
+
+export function setSyncId(syncId: string): void {
+  if (!isBrowser()) return;
+  localStorage.setItem(SYNC_ID_KEY, syncId.trim());
+}
+
+export function clearSyncId(): void {
+  removeItem(SYNC_ID_KEY);
+}
+
+export function getLocalUpdatedAt(): string | null {
+  if (!isBrowser()) return null;
+  return localStorage.getItem(LOCAL_UPDATED_KEY);
+}
+
+export function setLocalUpdatedAt(iso: string): void {
+  if (!isBrowser()) return;
+  localStorage.setItem(LOCAL_UPDATED_KEY, iso);
+}
+
+export function generateSyncId(): string {
+  const slug = crypto.randomUUID().slice(0, 8);
+  return `tcf-${slug}`;
 }
 
 export function getProfiles(): Profile[] {
@@ -53,7 +119,7 @@ export function getProfiles(): Profile[] {
 }
 
 export function saveProfiles(profiles: Profile[]): void {
-  writeItem(PROFILES_KEY, profiles);
+  writeAndNotify(PROFILES_KEY, profiles);
 }
 
 export function getActiveUserId(): string | null {
@@ -64,6 +130,8 @@ export function getActiveUserId(): string | null {
 export function setActiveUserId(userId: string): void {
   if (!isBrowser()) return;
   localStorage.setItem(ACTIVE_USER_KEY, userId);
+  touchLocalUpdated();
+  notifyChange();
 }
 
 export function createProfile(displayName: string): Profile {
@@ -77,8 +145,9 @@ export function createProfile(displayName: string): Profile {
   profiles.push(profile);
   saveProfiles(profiles);
   setActiveUserId(profile.id);
-  writeItem(scoresKey(profile.id), []);
-  writeItem(ecrituresKey(profile.id), []);
+  writeAndNotify(scoresKey(profile.id), []);
+  writeAndNotify(ecrituresKey(profile.id), []);
+  seedVocabCategories(profile.id);
   return profile;
 }
 
@@ -94,6 +163,8 @@ export function deleteProfile(userId: string): void {
   saveProfiles(profiles);
   removeItem(scoresKey(userId));
   removeItem(ecrituresKey(userId));
+  removeItem(vocabCategoriesKey(userId));
+  removeItem(vocabEntriesKey(userId));
 
   const activeId = getActiveUserId();
   if (activeId === userId) {
@@ -110,7 +181,7 @@ export function getScores(userId: string): ScoreEntry[] {
 }
 
 export function saveScores(userId: string, scores: ScoreEntry[]): void {
-  writeItem(scoresKey(userId), scores);
+  writeAndNotify(scoresKey(userId), scores);
 }
 
 export function addScoreEntries(
@@ -129,10 +200,7 @@ export function addScoreEntries(
   return newEntries;
 }
 
-export function updateScoreEntry(
-  userId: string,
-  entry: ScoreEntry
-): void {
+export function updateScoreEntry(userId: string, entry: ScoreEntry): void {
   const scores = getScores(userId).map((s) =>
     s.id === entry.id ? entry : s
   );
@@ -149,7 +217,7 @@ export function getEcritures(userId: string): EcritureEntry[] {
 }
 
 export function saveEcritures(userId: string, ecritures: EcritureEntry[]): void {
-  writeItem(ecrituresKey(userId), ecritures);
+  writeAndNotify(ecrituresKey(userId), ecritures);
 }
 
 export function addEcriture(
@@ -166,10 +234,7 @@ export function addEcriture(
   return newEntry;
 }
 
-export function updateEcriture(
-  userId: string,
-  entry: EcritureEntry
-): void {
+export function updateEcriture(userId: string, entry: EcritureEntry): void {
   const ecritures = getEcritures(userId).map((e) =>
     e.id === entry.id
       ? { ...entry, updatedAt: new Date().toISOString() }
@@ -183,6 +248,104 @@ export function deleteEcriture(userId: string, entryId: string): void {
   saveEcritures(userId, ecritures);
 }
 
+export function getVocabCategories(userId: string): VocabCategory[] {
+  return readItem<VocabCategory[]>(vocabCategoriesKey(userId), []);
+}
+
+export function saveVocabCategories(
+  userId: string,
+  categories: VocabCategory[]
+): void {
+  writeAndNotify(vocabCategoriesKey(userId), categories);
+}
+
+export function seedVocabCategories(userId: string): VocabCategory[] {
+  const existing = getVocabCategories(userId);
+  if (existing.length > 0) return existing;
+  const defaults = createDefaultCategories();
+  saveVocabCategories(userId, defaults);
+  return defaults;
+}
+
+export function addVocabCategory(
+  userId: string,
+  name: string
+): VocabCategory {
+  const categories = getVocabCategories(userId);
+  const category: VocabCategory = {
+    id: crypto.randomUUID(),
+    name: name.trim(),
+    createdAt: new Date().toISOString(),
+  };
+  saveVocabCategories(userId, [...categories, category]);
+  return category;
+}
+
+export function deleteVocabCategory(userId: string, categoryId: string): void {
+  const categories = getVocabCategories(userId).filter(
+    (c) => c.id !== categoryId
+  );
+  saveVocabCategories(userId, categories);
+  const entries = getVocabEntries(userId).filter(
+    (e) => e.categoryId !== categoryId
+  );
+  saveVocabEntries(userId, entries);
+}
+
+export function getVocabEntries(userId: string): VocabEntry[] {
+  return readItem<VocabEntry[]>(vocabEntriesKey(userId), []);
+}
+
+export function saveVocabEntries(userId: string, entries: VocabEntry[]): void {
+  writeAndNotify(vocabEntriesKey(userId), entries);
+}
+
+export function addVocabEntry(
+  userId: string,
+  entry: Omit<VocabEntry, "id" | "createdAt">
+): VocabEntry {
+  const existing = getVocabEntries(userId);
+  const newEntry: VocabEntry = {
+    ...entry,
+    id: crypto.randomUUID(),
+    createdAt: new Date().toISOString(),
+  };
+  saveVocabEntries(userId, [...existing, newEntry]);
+  return newEntry;
+}
+
+export function updateVocabEntry(userId: string, entry: VocabEntry): void {
+  const entries = getVocabEntries(userId).map((e) =>
+    e.id === entry.id
+      ? { ...entry, updatedAt: new Date().toISOString() }
+      : e
+  );
+  saveVocabEntries(userId, entries);
+}
+
+export function deleteVocabEntry(userId: string, entryId: string): void {
+  const entries = getVocabEntries(userId).filter((e) => e.id !== entryId);
+  saveVocabEntries(userId, entries);
+}
+
+export function importSyncBlob(blob: SyncBlob): void {
+  if (!isBrowser()) return;
+
+  writeItem(PROFILES_KEY, blob.profiles);
+  if (blob.activeUserId) {
+    localStorage.setItem(ACTIVE_USER_KEY, blob.activeUserId);
+  }
+
+  for (const [userId, bundle] of Object.entries(blob.data)) {
+    writeItem(scoresKey(userId), bundle.scores);
+    writeItem(ecrituresKey(userId), bundle.ecritures);
+    writeItem(vocabCategoriesKey(userId), bundle.vocabCategories);
+    writeItem(vocabEntriesKey(userId), bundle.vocabEntries);
+  }
+
+  setLocalUpdatedAt(blob.updatedAt);
+}
+
 export function exportUserData(userId: string): UserExportData | null {
   const profile = getProfiles().find((p) => p.id === userId);
   if (!profile) return null;
@@ -190,6 +353,8 @@ export function exportUserData(userId: string): UserExportData | null {
     profile,
     scores: getScores(userId),
     ecritures: getEcritures(userId),
+    vocabCategories: getVocabCategories(userId),
+    vocabEntries: getVocabEntries(userId),
     exportedAt: new Date().toISOString(),
   };
 }
@@ -198,21 +363,28 @@ export function importUserData(data: UserExportData): Profile {
   const profiles = getProfiles();
   const existing = profiles.find((p) => p.id === data.profile.id);
 
+  const apply = () => {
+    saveScores(data.profile.id, data.scores);
+    saveEcritures(data.profile.id, data.ecritures ?? []);
+    saveVocabCategories(data.profile.id, data.vocabCategories ?? []);
+    saveVocabEntries(data.profile.id, data.vocabEntries ?? []);
+    setActiveUserId(data.profile.id);
+  };
+
   if (existing) {
     const updated = profiles.map((p) =>
       p.id === data.profile.id ? data.profile : p
     );
     saveProfiles(updated);
-    saveScores(data.profile.id, data.scores);
-    saveEcritures(data.profile.id, data.ecritures ?? []);
-    setActiveUserId(data.profile.id);
+    apply();
     return data.profile;
   }
 
   profiles.push(data.profile);
   saveProfiles(profiles);
-  saveScores(data.profile.id, data.scores);
-  saveEcritures(data.profile.id, data.ecritures ?? []);
-  setActiveUserId(data.profile.id);
+  apply();
+  if (!getVocabCategories(data.profile.id).length) {
+    seedVocabCategories(data.profile.id);
+  }
   return data.profile;
 }

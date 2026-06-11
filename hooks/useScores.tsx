@@ -52,6 +52,12 @@ export function ScoresProvider({ children }: { children: React.ReactNode }) {
     refreshScores();
   }, [refreshScores]);
 
+  useEffect(() => {
+    const handler = () => refreshScores();
+    window.addEventListener("tcf-data-synced", handler);
+    return () => window.removeEventListener("tcf-data-synced", handler);
+  }, [refreshScores]);
+
   const addEntries = useCallback(
     (entries: Omit<ScoreEntry, "id" | "createdAt" | "maxScore">[]) => {
       if (!activeProfile) return;

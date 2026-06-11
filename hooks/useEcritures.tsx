@@ -50,6 +50,12 @@ export function EcrituresProvider({ children }: { children: React.ReactNode }) {
     refreshEcritures();
   }, [refreshEcritures]);
 
+  useEffect(() => {
+    const handler = () => refreshEcritures();
+    window.addEventListener("tcf-data-synced", handler);
+    return () => window.removeEventListener("tcf-data-synced", handler);
+  }, [refreshEcritures]);
+
   const addEntry = useCallback(
     (entry: Omit<EcritureEntry, "id" | "createdAt">) => {
       if (!activeProfile) return;
