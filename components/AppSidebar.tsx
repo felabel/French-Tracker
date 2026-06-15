@@ -7,6 +7,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ClipboardList,
+  Headphones,
   LayoutDashboard,
   Menu,
   PenLine,
@@ -31,6 +32,7 @@ const NAV_GROUPS = [
     label: "Practice",
     items: [
       { href: "/log", label: "Log Test", icon: PlusCircle },
+      { href: "/ecoute", label: "Compréhension orale", icon: Headphones },
       { href: "/expression-ecrite", label: "Expression écrite", icon: PenLine },
       { href: "/vocabulaire", label: "Vocabulaire", icon: BookOpen },
     ],

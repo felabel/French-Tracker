@@ -20,6 +20,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
 import { CefrBadge } from "@/components/CefrBadge";
 import { NclcBadge } from "@/components/NclcBadge";
 import { ScoreForm } from "@/components/ScoreForm";
@@ -38,6 +39,7 @@ export function ScoresTable({ scores }: ScoresTableProps) {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [sections, setSections] = useState<Set<TcfSection>>(new Set(ALL_SECTIONS));
+  const [mockOnly, setMockOnly] = useState(false);
   const [editingEntry, setEditingEntry] = useState<ScoreEntry | null>(null);
 
   const filtered = useMemo(() => {
@@ -46,6 +48,7 @@ export function ScoresTable({ scores }: ScoresTableProps) {
         if (dateFrom && entry.date < dateFrom) return false;
         if (dateTo && entry.date > dateTo) return false;
         if (!sections.has(entry.section)) return false;
+        if (mockOnly && !entry.isMockTest) return false;
         return true;
       })
       .sort((a, b) => {
@@ -53,7 +56,7 @@ export function ScoresTable({ scores }: ScoresTableProps) {
         if (dateCmp !== 0) return dateCmp;
         return b.createdAt.localeCompare(a.createdAt);
       });
-  }, [scores, dateFrom, dateTo, sections]);
+  }, [scores, dateFrom, dateTo, sections, mockOnly]);
 
   const toggleSection = (section: TcfSection) => {
     setSections((prev) => {
@@ -118,6 +121,15 @@ export function ScoresTable({ scores }: ScoresTableProps) {
                     {section}
                   </label>
                 ))}
+                <label className="flex items-center gap-2 text-sm">
+                  <Checkbox
+                    checked={mockOnly}
+                    onCheckedChange={(checked) =>
+                      setMockOnly(checked === true)
+                    }
+                  />
+                  Mock tests only
+                </label>
               </div>
             </div>
           </div>
@@ -166,6 +178,11 @@ export function ScoresTable({ scores }: ScoresTableProps) {
                           {" "}
                           — {SECTION_LABELS[entry.section]}
                         </span>
+                        {entry.isMockTest && (
+                          <Badge variant="outline" className="ml-2 text-xs">
+                            Mock
+                          </Badge>
+                        )}
                       </TableCell>
                       <TableCell className="font-medium">
                         {entry.score}/699

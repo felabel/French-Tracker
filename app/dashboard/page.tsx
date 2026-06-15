@@ -7,8 +7,16 @@ import { Badge } from "@/components/ui/badge";
 import { SectionChart } from "@/components/SectionChart";
 import { PracticeHeatmap } from "@/components/PracticeHeatmap";
 import { StatCard, SummaryStatCard, getSectionDelta } from "@/components/StatCard";
+import { CefrBadge } from "@/components/CefrBadge";
+import { NclcBadge } from "@/components/NclcBadge";
 import { useScores } from "@/hooks/useScores";
+import { useListening } from "@/hooks/useListening";
 import { useProfile } from "@/hooks/useProfile";
+import {
+  getCurrentWeekSummary,
+  getMockCoScoreForWeek,
+  getThisSunday,
+} from "@/lib/listening";
 import {
   formatPercent,
   getDaysPracticedThisMonth,
@@ -24,11 +32,15 @@ import { ALL_SECTIONS } from "@/lib/types";
 
 export default function DashboardPage() {
   const { scores, isLoading } = useScores();
+  const { listeningDaily, isLoading: listeningLoading } = useListening();
   const { activeProfile } = useProfile();
 
-  if (isLoading) {
+  if (isLoading || listeningLoading) {
     return <p className="text-muted-foreground">Loading scores...</p>;
   }
+
+  const weekSummary = getCurrentWeekSummary(listeningDaily);
+  const mockCoThisWeek = getMockCoScoreForWeek(scores, getThisSunday());
 
   const latest = getLatestBySection(scores);
   const practiceDates = getPracticeDates(scores);
@@ -60,6 +72,54 @@ export default function DashboardPage() {
           <Link href="/log">Log new test</Link>
         </Button>
       </div>
+
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium text-muted-foreground">
+            Listening this week
+          </CardTitle>
+          <CardDescription>
+            Daily practice logged in your listening journal.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div>
+              <p className="text-2xl font-bold">{weekSummary.daysLogged}/7</p>
+              <p className="text-sm text-muted-foreground">Days logged</p>
+            </div>
+            <div>
+              <p className="text-2xl font-bold">
+                {weekSummary.totalTcfQuestions}
+              </p>
+              <p className="text-sm text-muted-foreground">TCF questions</p>
+            </div>
+            <div>
+              <p className="text-2xl font-bold">
+                {weekSummary.totalDictationMinutes} min
+              </p>
+              <p className="text-sm text-muted-foreground">Dictation</p>
+            </div>
+          </div>
+          {mockCoThisWeek ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-sm text-muted-foreground">
+                Latest mock CO:
+              </span>
+              <span className="font-medium">{mockCoThisWeek.score}/699</span>
+              <NclcBadge section="CO" score={mockCoThisWeek.score} />
+              <CefrBadge score={mockCoThisWeek.score} />
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              No mock CO score logged this week yet.
+            </p>
+          )}
+          <Button variant="outline" size="sm" asChild>
+            <Link href="/ecoute">Open listening journal</Link>
+          </Button>
+        </CardContent>
+      </Card>
 
       {scores.length === 0 ? (
         <Card>

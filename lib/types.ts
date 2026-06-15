@@ -19,7 +19,28 @@ export interface ScoreEntry {
   score: number;
   maxScore: 699;
   notes?: string;
+  isMockTest?: boolean;
   createdAt: string;
+}
+
+export interface ListeningDailyEntry {
+  id: string;
+  date: string;
+  formationTcfQuestions: number;
+  dictationMinutes: number;
+  innerFrenchEpisode?: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface ListeningWeeklyReview {
+  id: string;
+  weekEnding: string;
+  biggestDifficulty: string;
+  biggestImprovement: string;
+  createdAt: string;
+  updatedAt?: string;
 }
 
 export interface EcritureEntry {
@@ -55,6 +76,8 @@ export interface UserDataBundle {
   ecritures: EcritureEntry[];
   vocabCategories: VocabCategory[];
   vocabEntries: VocabEntry[];
+  listeningDaily: ListeningDailyEntry[];
+  listeningWeekly: ListeningWeeklyReview[];
 }
 
 export interface SyncBlob {
@@ -71,6 +94,8 @@ export interface UserExportData {
   ecritures?: EcritureEntry[];
   vocabCategories?: VocabCategory[];
   vocabEntries?: VocabEntry[];
+  listeningDaily?: ListeningDailyEntry[];
+  listeningWeekly?: ListeningWeeklyReview[];
   exportedAt: string;
 }
 

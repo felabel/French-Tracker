@@ -11,6 +11,7 @@ import { NclcBadge } from "@/components/NclcBadge";
 import { CefrBadge } from "@/components/CefrBadge";
 import { isValidScore, SECTION_LABELS } from "@/lib/tcf";
 import { ALL_SECTIONS, ScoreEntry, TcfSection } from "@/lib/types";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface ScoreFormProps {
   editEntry?: ScoreEntry;
@@ -29,6 +30,7 @@ export function ScoreForm({ editEntry, onSuccess, onCancel }: ScoreFormProps) {
     editEntry?.date ?? new Date().toISOString().slice(0, 10)
   );
   const [notes, setNotes] = useState(editEntry?.notes ?? "");
+  const [isMockTest, setIsMockTest] = useState(editEntry?.isMockTest ?? false);
   const [scores, setScores] = useState<Record<TcfSection, string>>({
     CO: editEntry?.section === "CO" ? String(editEntry.score) : "",
     CE: editEntry?.section === "CE" ? String(editEntry.score) : "",
@@ -39,6 +41,13 @@ export function ScoreForm({ editEntry, onSuccess, onCancel }: ScoreFormProps) {
     editEntry?.section ?? "CO"
   );
   const [errors, setErrors] = useState<string[]>([]);
+
+  const showMockCheckbox =
+    isEdit && editEntry
+      ? editEntry.section === "CO"
+      : mode === "single"
+        ? selectedSection === "CO"
+        : Boolean(scores.CO);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,6 +66,7 @@ export function ScoreForm({ editEntry, onSuccess, onCancel }: ScoreFormProps) {
           date,
           score,
           notes: notes.trim() || undefined,
+          isMockTest: editEntry.section === "CO" && isMockTest ? true : undefined,
         });
         onSuccess?.();
       }
@@ -82,6 +92,8 @@ export function ScoreForm({ editEntry, onSuccess, onCancel }: ScoreFormProps) {
         section,
         score,
         notes: notes.trim() || undefined,
+        isMockTest:
+          section === "CO" && isMockTest ? true : undefined,
       });
     }
 
@@ -93,6 +105,7 @@ export function ScoreForm({ editEntry, onSuccess, onCancel }: ScoreFormProps) {
     addEntries(entries);
     setScores({ CO: "", CE: "", EO: "", EE: "" });
     setNotes("");
+    setIsMockTest(false);
     setErrors([]);
     onSuccess?.();
   };
@@ -210,6 +223,18 @@ export function ScoreForm({ editEntry, onSuccess, onCancel }: ScoreFormProps) {
               onChange={(e) => setNotes(e.target.value)}
             />
           </div>
+
+          {showMockCheckbox && (
+            <label className="flex items-center gap-2 text-sm">
+              <Checkbox
+                checked={isMockTest}
+                onCheckedChange={(checked) =>
+                  setIsMockTest(checked === true)
+                }
+              />
+              Mock listening test (CO)
+            </label>
+          )}
 
           {errors.length > 0 && (
             <ul className="space-y-1 text-sm text-destructive">

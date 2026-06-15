@@ -1,5 +1,7 @@
 import {
   EcritureEntry,
+  ListeningDailyEntry,
+  ListeningWeeklyReview,
   Profile,
   ScoreEntry,
   SyncBlob,
@@ -10,6 +12,8 @@ import {
 import {
   getActiveUserId,
   getEcritures,
+  getListeningDaily,
+  getListeningWeekly,
   getProfiles,
   getScores,
   getVocabCategories,
@@ -35,6 +39,8 @@ export function buildSyncBlob(): SyncBlob {
       ecritures: getEcritures(profile.id),
       vocabCategories: getVocabCategories(profile.id),
       vocabEntries: getVocabEntries(profile.id),
+      listeningDaily: getListeningDaily(profile.id),
+      listeningWeekly: getListeningWeekly(profile.id),
     };
   }
 
@@ -102,6 +108,14 @@ export function mergeSyncBlobs(local: SyncBlob, remote: SyncBlob): SyncBlob {
         r.vocabCategories
       ) as VocabCategory[],
       vocabEntries: mergeEntries(l.vocabEntries, r.vocabEntries) as VocabEntry[],
+      listeningDaily: mergeEntries(
+        l.listeningDaily ?? [],
+        r.listeningDaily ?? []
+      ) as ListeningDailyEntry[],
+      listeningWeekly: mergeEntries(
+        l.listeningWeekly ?? [],
+        r.listeningWeekly ?? []
+      ) as ListeningWeeklyReview[],
     };
   }
 
@@ -124,6 +138,8 @@ function emptyBundle(): UserDataBundle {
     ecritures: [],
     vocabCategories: [],
     vocabEntries: [],
+    listeningDaily: [],
+    listeningWeekly: [],
   };
 }
 

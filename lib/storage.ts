@@ -1,5 +1,7 @@
 import {
   EcritureEntry,
+  ListeningDailyEntry,
+  ListeningWeeklyReview,
   Profile,
   ScoreEntry,
   SyncBlob,
@@ -31,6 +33,14 @@ function vocabCategoriesKey(userId: string): string {
 
 function vocabEntriesKey(userId: string): string {
   return `tcf_vocab_entries_${userId}`;
+}
+
+function listeningDailyKey(userId: string): string {
+  return `tcf_listening_daily_${userId}`;
+}
+
+function listeningWeeklyKey(userId: string): string {
+  return `tcf_listening_weekly_${userId}`;
 }
 
 function isBrowser(): boolean {
@@ -147,6 +157,8 @@ export function createProfile(displayName: string): Profile {
   setActiveUserId(profile.id);
   writeAndNotify(scoresKey(profile.id), []);
   writeAndNotify(ecrituresKey(profile.id), []);
+  writeAndNotify(listeningDailyKey(profile.id), []);
+  writeAndNotify(listeningWeeklyKey(profile.id), []);
   seedVocabCategories(profile.id);
   return profile;
 }
@@ -165,6 +177,8 @@ export function deleteProfile(userId: string): void {
   removeItem(ecrituresKey(userId));
   removeItem(vocabCategoriesKey(userId));
   removeItem(vocabEntriesKey(userId));
+  removeItem(listeningDailyKey(userId));
+  removeItem(listeningWeeklyKey(userId));
 
   const activeId = getActiveUserId();
   if (activeId === userId) {
@@ -328,6 +342,116 @@ export function deleteVocabEntry(userId: string, entryId: string): void {
   saveVocabEntries(userId, entries);
 }
 
+export function getListeningDaily(userId: string): ListeningDailyEntry[] {
+  return readItem<ListeningDailyEntry[]>(listeningDailyKey(userId), []);
+}
+
+export function saveListeningDaily(
+  userId: string,
+  entries: ListeningDailyEntry[]
+): void {
+  writeAndNotify(listeningDailyKey(userId), entries);
+}
+
+export function upsertListeningDaily(
+  userId: string,
+  entry: Omit<ListeningDailyEntry, "id" | "createdAt" | "updatedAt">
+): ListeningDailyEntry {
+  const existing = getListeningDaily(userId);
+  const match = existing.find((e) => e.date === entry.date);
+  if (match) {
+    const updated: ListeningDailyEntry = {
+      ...match,
+      ...entry,
+      updatedAt: new Date().toISOString(),
+    };
+    saveListeningDaily(
+      userId,
+      existing.map((e) => (e.id === match.id ? updated : e))
+    );
+    return updated;
+  }
+  const newEntry: ListeningDailyEntry = {
+    ...entry,
+    id: crypto.randomUUID(),
+    createdAt: new Date().toISOString(),
+  };
+  saveListeningDaily(userId, [...existing, newEntry]);
+  return newEntry;
+}
+
+export function updateListeningDaily(
+  userId: string,
+  entry: ListeningDailyEntry
+): void {
+  const entries = getListeningDaily(userId).map((e) =>
+    e.id === entry.id
+      ? { ...entry, updatedAt: new Date().toISOString() }
+      : e
+  );
+  saveListeningDaily(userId, entries);
+}
+
+export function deleteListeningDaily(userId: string, entryId: string): void {
+  const entries = getListeningDaily(userId).filter((e) => e.id !== entryId);
+  saveListeningDaily(userId, entries);
+}
+
+export function getListeningWeekly(userId: string): ListeningWeeklyReview[] {
+  return readItem<ListeningWeeklyReview[]>(listeningWeeklyKey(userId), []);
+}
+
+export function saveListeningWeekly(
+  userId: string,
+  reviews: ListeningWeeklyReview[]
+): void {
+  writeAndNotify(listeningWeeklyKey(userId), reviews);
+}
+
+export function upsertListeningWeekly(
+  userId: string,
+  review: Omit<ListeningWeeklyReview, "id" | "createdAt" | "updatedAt">
+): ListeningWeeklyReview {
+  const existing = getListeningWeekly(userId);
+  const match = existing.find((r) => r.weekEnding === review.weekEnding);
+  if (match) {
+    const updated: ListeningWeeklyReview = {
+      ...match,
+      ...review,
+      updatedAt: new Date().toISOString(),
+    };
+    saveListeningWeekly(
+      userId,
+      existing.map((r) => (r.id === match.id ? updated : r))
+    );
+    return updated;
+  }
+  const newReview: ListeningWeeklyReview = {
+    ...review,
+    id: crypto.randomUUID(),
+    createdAt: new Date().toISOString(),
+  };
+  saveListeningWeekly(userId, [...existing, newReview]);
+  return newReview;
+}
+
+export function updateListeningWeekly(
+  userId: string,
+  review: ListeningWeeklyReview
+): void {
+  const reviews = getListeningWeekly(userId).map((r) =>
+    r.id === review.id
+      ? { ...review, updatedAt: new Date().toISOString() }
+      : r
+  );
+  saveListeningWeekly(userId, reviews);
+}
+
+export function deleteListeningWeekly(userId: string, reviewId: string): void {
+  const reviews = getListeningWeekly(userId).filter((r) => r.id !== reviewId);
+  saveListeningWeekly(userId, reviews);
+}
+
 export function importSyncBlob(blob: SyncBlob): void {
   if (!isBrowser()) return;
 
@@ -341,6 +465,8 @@ export function importSyncBlob(blob: SyncBlob): void {
     writeItem(ecrituresKey(userId), bundle.ecritures);
     writeItem(vocabCategoriesKey(userId), bundle.vocabCategories);
     writeItem(vocabEntriesKey(userId), bundle.vocabEntries);
+    writeItem(listeningDailyKey(userId), bundle.listeningDaily ?? []);
+    writeItem(listeningWeeklyKey(userId), bundle.listeningWeekly ?? []);
   }
 
   setLocalUpdatedAt(blob.updatedAt);
@@ -355,6 +481,8 @@ export function exportUserData(userId: string): UserExportData | null {
     ecritures: getEcritures(userId),
     vocabCategories: getVocabCategories(userId),
     vocabEntries: getVocabEntries(userId),
+    listeningDaily: getListeningDaily(userId),
+    listeningWeekly: getListeningWeekly(userId),
     exportedAt: new Date().toISOString(),
   };
 }
@@ -368,6 +496,8 @@ export function importUserData(data: UserExportData): Profile {
     saveEcritures(data.profile.id, data.ecritures ?? []);
     saveVocabCategories(data.profile.id, data.vocabCategories ?? []);
     saveVocabEntries(data.profile.id, data.vocabEntries ?? []);
+    saveListeningDaily(data.profile.id, data.listeningDaily ?? []);
+    saveListeningWeekly(data.profile.id, data.listeningWeekly ?? []);
     setActiveUserId(data.profile.id);
   };
 
