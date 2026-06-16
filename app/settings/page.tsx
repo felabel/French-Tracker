@@ -63,6 +63,7 @@ export default function SettingsPage() {
     setSyncId(trimmed);
     setMessage(`Sync ID set to "${trimmed}". Syncing now…`);
     setError("");
+    window.dispatchEvent(new Event("tcf-sync-id-changed"));
     syncNow();
   };
 
@@ -72,6 +73,7 @@ export default function SettingsPage() {
     setSyncId(id);
     setMessage(`Generated Sync ID: ${id}. Use this on all your devices.`);
     setError("");
+    window.dispatchEvent(new Event("tcf-sync-id-changed"));
     syncNow();
   };
 
@@ -203,7 +205,8 @@ export default function SettingsPage() {
         <CardHeader>
           <CardTitle>Profiles</CardTitle>
           <CardDescription>
-            Switch between users on this device. No password required.
+            Display names for this device. Your Sync ID (top bar) is what
+            restores data across browsers — not the profile name.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

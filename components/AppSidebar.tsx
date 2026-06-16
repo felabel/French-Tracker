@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   BookOpen,
+  Calculator,
   ChevronLeft,
   ChevronRight,
   ClipboardList,
@@ -26,6 +27,7 @@ const NAV_GROUPS = [
     items: [
       { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
       { href: "/scores", label: "Scores", icon: Table2 },
+      { href: "/nclc", label: "Calculateur NCLC", icon: Calculator },
     ],
   },
   {

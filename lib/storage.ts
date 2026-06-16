@@ -103,6 +103,7 @@ export function getSyncId(): string | null {
 export function setSyncId(syncId: string): void {
   if (!isBrowser()) return;
   localStorage.setItem(SYNC_ID_KEY, syncId.trim());
+  window.dispatchEvent(new Event("tcf-sync-id-changed"));
 }
 
 export function clearSyncId(): void {

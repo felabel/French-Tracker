@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { MobileMenuButton } from "@/components/AppSidebar";
+import { SyncIdChip } from "@/components/SyncIdChip";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useProfile } from "@/hooks/useProfile";
 import { useSync } from "@/hooks/useSync";
@@ -31,6 +32,8 @@ export function AppTopBar() {
       </div>
 
       <div className="flex items-center gap-2">
+        <SyncIdChip />
+
         {syncId && (
           <Button
             variant="ghost"

@@ -44,7 +44,14 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
   }, [refreshProfiles]);
 
   useEffect(() => {
-    setSyncIdState(getSyncId());
+    const refresh = () => setSyncIdState(getSyncId());
+    refresh();
+    window.addEventListener("tcf-sync-id-changed", refresh);
+    const unsub = onDataChange(refresh);
+    return () => {
+      window.removeEventListener("tcf-sync-id-changed", refresh);
+      unsub();
+    };
   }, []);
 
   useEffect(() => {

@@ -10,6 +10,7 @@ import {
   VocabEntry,
 } from "./types";
 import {
+  clearSyncId,
   getActiveUserId,
   getEcritures,
   getListeningDaily,
@@ -22,6 +23,8 @@ import {
   getLocalUpdatedAt,
   setLocalUpdatedAt,
   getSyncId,
+  setActiveUserId,
+  setSyncId,
 } from "./storage";
 
 const SYNC_API = "/api/sync";
@@ -141,6 +144,51 @@ function emptyBundle(): UserDataBundle {
     listeningDaily: [],
     listeningWeekly: [],
   };
+}
+
+export async function restoreFromSyncId(syncId: string): Promise<{
+  ok: boolean;
+  error?: string;
+}> {
+  const trimmed = syncId.trim();
+  if (!trimmed) {
+    return { ok: false, error: "Enter your Sync ID." };
+  }
+
+  setSyncId(trimmed);
+
+  try {
+    const remote = await pullFromCloud(trimmed);
+
+    if (!remote || remote.profiles.length === 0) {
+      clearSyncId();
+      return {
+        ok: false,
+        error:
+          "No data found for this Sync ID. Check the spelling or create a new tracker.",
+      };
+    }
+
+    applySyncBlob(remote);
+
+    if (!getActiveUserId()) {
+      const activeId =
+        remote.activeUserId &&
+        remote.profiles.some((p) => p.id === remote.activeUserId)
+          ? remote.activeUserId
+          : remote.profiles[0].id;
+      setActiveUserId(activeId);
+    }
+
+    window.dispatchEvent(new Event("tcf-data-synced"));
+    return { ok: true };
+  } catch {
+    clearSyncId();
+    return {
+      ok: false,
+      error: "Could not reach cloud sync. Check your connection and try again.",
+    };
+  }
 }
 
 export async function pullFromCloud(syncId: string): Promise<SyncBlob | null> {
