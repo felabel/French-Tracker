@@ -43,9 +43,13 @@ export interface ListeningWeeklyReview {
   updatedAt?: string;
 }
 
+export type EcritureTache = "T1" | "T2" | "T3" | "mix";
+
 export interface EcritureEntry {
   id: string;
   date: string;
+  /** Missing on older entries — treated as "mix". */
+  tache?: EcritureTache;
   subject: string;
   prompt: string;
   text: string;

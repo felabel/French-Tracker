@@ -8,7 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { countWords } from "@/lib/ecriture";
+import { countWords, getTache, TACHE_LABELS } from "@/lib/ecriture";
 import { EcritureEntry } from "@/lib/types";
 import { format, parseISO } from "date-fns";
 
@@ -44,6 +44,10 @@ export function EcritureDetailModal({
             <span>
               <span className="font-medium text-foreground">Date: </span>
               {format(parseISO(entry.date), "MMMM d, yyyy")}
+            </span>
+            <span>
+              <span className="font-medium text-foreground">Tâche: </span>
+              {TACHE_LABELS[getTache(entry)]}
             </span>
             <span>
               <span className="font-medium text-foreground">Words: </span>

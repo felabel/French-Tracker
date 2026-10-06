@@ -8,12 +8,13 @@ import {
   useMemo,
   useState,
 } from "react";
-import { EcritureEntry } from "@/lib/types";
+import { EcritureEntry, EcritureTache } from "@/lib/types";
 import {
   addEcriture,
   deleteEcriture,
   getEcritures,
   saveEcritures,
+  setEcrituresTache,
   updateEcriture,
 } from "@/lib/storage";
 import { useProfile } from "./useProfile";
@@ -24,6 +25,7 @@ interface EcrituresContextValue {
   addEntry: (entry: Omit<EcritureEntry, "id" | "createdAt">) => void;
   updateEntry: (entry: EcritureEntry) => void;
   deleteEntry: (entryId: string) => void;
+  setTache: (entryIds: string[], tache: EcritureTache) => void;
   replaceAll: (entries: EcritureEntry[]) => void;
   refreshEcritures: () => void;
 }
@@ -83,6 +85,15 @@ export function EcrituresProvider({ children }: { children: React.ReactNode }) {
     [activeProfile, refreshEcritures]
   );
 
+  const setTache = useCallback(
+    (entryIds: string[], tache: EcritureTache) => {
+      if (!activeProfile) return;
+      setEcrituresTache(activeProfile.id, entryIds, tache);
+      refreshEcritures();
+    },
+    [activeProfile, refreshEcritures]
+  );
+
   const replaceAll = useCallback(
     (entries: EcritureEntry[]) => {
       if (!activeProfile) return;
@@ -99,6 +110,7 @@ export function EcrituresProvider({ children }: { children: React.ReactNode }) {
       addEntry,
       updateEntry,
       deleteEntry,
+      setTache,
       replaceAll,
       refreshEcritures,
     }),
@@ -108,6 +120,7 @@ export function EcrituresProvider({ children }: { children: React.ReactNode }) {
       addEntry,
       updateEntry,
       deleteEntry,
+      setTache,
       replaceAll,
       refreshEcritures,
     ]

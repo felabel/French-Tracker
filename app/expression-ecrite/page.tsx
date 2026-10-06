@@ -11,7 +11,7 @@ import { useEcritures } from "@/hooks/useEcritures";
 import { EcritureEntry } from "@/lib/types";
 
 export default function ExpressionEcritePage() {
-  const { ecritures, isLoading, deleteEntry } = useEcritures();
+  const { ecritures, isLoading, deleteEntry, setTache } = useEcritures();
   const [formOpen, setFormOpen] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
   const [selectedEntry, setSelectedEntry] = useState<EcritureEntry | null>(null);
@@ -83,6 +83,7 @@ export default function ExpressionEcritePage() {
           onRowClick={handleRowClick}
           onEdit={handleEdit}
           onDelete={handleDelete}
+          onSetTache={setTache}
         />
       )}
 

@@ -1,5 +1,6 @@
 import {
   EcritureEntry,
+  EcritureTache,
   ListeningDailyEntry,
   ListeningWeeklyReview,
   Profile,
@@ -254,6 +255,19 @@ export function updateEcriture(userId: string, entry: EcritureEntry): void {
     e.id === entry.id
       ? { ...entry, updatedAt: new Date().toISOString() }
       : e
+  );
+  saveEcritures(userId, ecritures);
+}
+
+export function setEcrituresTache(
+  userId: string,
+  entryIds: string[],
+  tache: EcritureTache
+): void {
+  const ids = new Set(entryIds);
+  const now = new Date().toISOString();
+  const ecritures = getEcritures(userId).map((e) =>
+    ids.has(e.id) ? { ...e, tache, updatedAt: now } : e
   );
   saveEcritures(userId, ecritures);
 }

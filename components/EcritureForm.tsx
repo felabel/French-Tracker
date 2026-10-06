@@ -6,6 +6,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -13,8 +20,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useEcritures } from "@/hooks/useEcritures";
-import { countWords } from "@/lib/ecriture";
-import { EcritureEntry } from "@/lib/types";
+import { countWords, ECRITURE_TACHES, TACHE_LABELS } from "@/lib/ecriture";
+import { EcritureEntry, EcritureTache } from "@/lib/types";
 
 interface EcritureFormProps {
   open: boolean;
@@ -33,6 +40,9 @@ export function EcritureForm({
   const [date, setDate] = useState(
     editEntry?.date ?? new Date().toISOString().slice(0, 10)
   );
+  const [tache, setTache] = useState<EcritureTache | "">(
+    editEntry?.tache ?? (editEntry ? "mix" : "")
+  );
   const [subject, setSubject] = useState(editEntry?.subject ?? "");
   const [prompt, setPrompt] = useState(editEntry?.prompt ?? "");
   const [text, setText] = useState(editEntry?.text ?? "");
@@ -41,6 +51,7 @@ export function EcritureForm({
   useEffect(() => {
     if (open) {
       setDate(editEntry?.date ?? new Date().toISOString().slice(0, 10));
+      setTache(editEntry?.tache ?? (editEntry ? "mix" : ""));
       setSubject(editEntry?.subject ?? "");
       setPrompt(editEntry?.prompt ?? "");
       setText(editEntry?.text ?? "");
@@ -52,6 +63,7 @@ export function EcritureForm({
     if (!next) {
       setError("");
       if (!isEdit) {
+        setTache("");
         setSubject("");
         setPrompt("");
         setText("");
@@ -72,6 +84,10 @@ export function EcritureForm({
       setError("Date is required.");
       return;
     }
+    if (!tache) {
+      setError("Tâche is required.");
+      return;
+    }
     if (!trimmedSubject) {
       setError("Subject is required.");
       return;
@@ -89,6 +105,7 @@ export function EcritureForm({
       updateEntry({
         ...editEntry,
         date,
+        tache,
         subject: trimmedSubject,
         prompt: trimmedPrompt,
         text: trimmedText,
@@ -96,6 +113,7 @@ export function EcritureForm({
     } else {
       addEntry({
         date,
+        tache,
         subject: trimmedSubject,
         prompt: trimmedPrompt,
         text: trimmedText,
@@ -119,7 +137,7 @@ export function EcritureForm({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="flex flex-1 flex-col gap-4 overflow-y-auto">
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-4 sm:grid-cols-[1fr_1fr_2fr]">
             <div className="space-y-2">
               <Label htmlFor="ecriture-date">Date</Label>
               <Input
@@ -129,6 +147,27 @@ export function EcritureForm({
                 onChange={(e) => setDate(e.target.value)}
                 required
               />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="ecriture-tache">Tâche</Label>
+              <Select
+                value={tache}
+                onValueChange={(value) => {
+                  setTache(value as EcritureTache);
+                  setError("");
+                }}
+              >
+                <SelectTrigger id="ecriture-tache">
+                  <SelectValue placeholder="Select tâche" />
+                </SelectTrigger>
+                <SelectContent>
+                  {ECRITURE_TACHES.map((t) => (
+                    <SelectItem key={t} value={t}>
+                      {TACHE_LABELS[t]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <Label htmlFor="ecriture-subject">Subject</Label>
